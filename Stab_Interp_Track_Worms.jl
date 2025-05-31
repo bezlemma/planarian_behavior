@@ -34,11 +34,12 @@ const CM_PER_PIXEL = 1.0f0 / 58.6f0
 const MSEC_PER_FRAME = 50.0f0 * 2.0f0
 
 
-
 filepaths = [
      "/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATM1_1.tif",
     "/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATM1_2.tif",
    "/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATM1_3.tif",
+      "/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATM1_4.tif",
+         "/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATM1_5.tif",
 ]
 global binary_stack = BitArray{3}(undef, (0,0,0))
 all_worms = WormData[]
@@ -81,7 +82,7 @@ img_height_cm_overall = first_data_for_dims.img_rows * CM_PER_PIXEL
 ax_3d = Axis3(fig_3d_traj[1,1], xlabel="X (cm)", ylabel="Y (cm)", zlabel="Time (s)", 
 limits = ( (0, img_width_cm_overall),(0, img_height_cm_overall),(0, maximum(max_times_per_dataset))  ))
 
-colors_traj = distinguishable_colors(max(1,length(all_worms)), [RGB(1,0,1), RGB(0.7,0,0.7), RGB(0.5,0,0.5), RGB(0.5,0,0.3), RGB(0.5,0,0.1)], lchoices=range(20, stop=70, length=15))
+colors_traj = distinguishable_colors(max(1, length(all_worms)), [RGB(0.0, 1.0, 1.0), RGB(0.125, 0.875, 0.875), RGB(0.25, 0.75, 0.75), RGB(0.375, 0.625, 0.625), RGB(0.5, 0.5, 0.5)], lchoices=range(20, stop=70, length=15))
 for (i, worm) in enumerate(all_worms)
     lines!(ax_3d, worm.positions_cm, color=colors_traj[i], linewidth=4)
 end
