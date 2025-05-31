@@ -2,7 +2,7 @@
 
 using Glob
 
-folder_path = "/Users/dl0346/Documents/May27_CircleAssay"
+folder_path = "/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow_AllConditions_DONE"
 
 for filepath in glob("*.tiff", folder_path)
     filename_with_ext = basename(filepath)
