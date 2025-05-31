@@ -113,3 +113,40 @@ function plot_sum_pairwise_differences_over_time(all_worm_data::Vector{WormProce
     lines!(ax, valid_times_for_sum_diff, sum_diff_values, color=:green, linewidth=2)
     display(GLMakie.Screen(), fig); return fig
 end
+
+
+
+function view_stack_and_worm(binary_stack_to_show,tracked_worm_data)
+    marker_color=RGBAf(1.0, 0.0, 0.0, 0.7) 
+    rows, cols, num_frames = size(binary_stack_to_show)
+    worm_info_for_frame = Dict{Int, Tuple{Point2f, Int}}() 
+    for i in 1:length(tracked_worm_data.positions_)
+        pt3 = tracked_worm_data.positions_[i]
+        frame_idx = Int(round(pt3[3]))
+        centroid = Point2f(pt3[2], pt3[1]) # (col_, row_) for GLMakie point
+        area = tracked_worm_data.areas_2[i]
+        worm_info_for_frame[frame_idx] = (centroid, area)
+    end
+    fig = Figure(size = (cols > rows ? (800, 800 * rows/cols + 100) : (800 * cols/rows + 100, 800)))
+    ax_img = Axis(fig[1, 1])
+    slider = Slider(fig[2, 1], range=1:num_frames, startvalue=1)
+    frame_idx_obs = slider.value
+    img_slice_obs = lift(frame_idx_obs) do f_idx
+        return Gray.(view(binary_stack_to_show, :, :, f_idx)) 
+    end
+    image!(ax_img, img_slice_obs, interpolate=false, colormap=:grays, colorrange=(0,1))
+    worm_marker_obs = Observable([Circle(Point2f(NaN, NaN), 0f0)])
+    on(frame_idx_obs) do f_idx
+        if haskey(worm_info_for_frame, f_idx)
+            centroid, wormarea = worm_info_for_frame[f_idx]
+            radius = sqrt(max(0.0, Float64(wormarea)) / π)
+            display_radius = clamp(Float32(radius), 2f0, 25f0)
+            worm_marker_obs[] = [Circle(centroid, display_radius)]
+        else
+            worm_marker_obs[] = [Circle(Point2f(NaN, NaN), 0f0)]
+        end
+    end
+    poly!(ax_img, worm_marker_obs, color=marker_color, strokecolor=:transparent)
+    display(GLMakie.Screen(), fig)
+    return fig
+end
