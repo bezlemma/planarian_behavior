@@ -1,44 +1,22 @@
-#When doing a circle assay, we have special information that could help us find the worm at the edges of the circle
-#TODO: Make this pass variables rather than using constants
-#TODO: Make some logic about primary axis being most likely axis that worm moves in
-#TODO: Make some major/minor axis cutoff logic where the structure is no longer a worm? This might be better still as a circularity cutoff for compactness.
+module FUNC_WormFinder
 
-module FUNC_WormFinderCIRCLE
-
-using LinearAlgebra 
-using Statistics    
-using GeometryBasics 
+using LinearAlgebra # For norm (distance calculation)
+using Statistics    # For mean
+using GeometryBasics # For Polygon, Rect, Point2f, Point3f, Circle\
 include("FUNC_ObjectFind.jl")
 using .FUNC_ObjectFind
 
-export find_objects_features, create_track, worm_track_pass, interpolate_circular_path, WormData
+export find_objects_features, create_track, worm_track_pass, WormData
 
 # Constants for worm tracking
 const MIN_AREA = 15
 const WORM_DISTANCE_LINK = 40.0f0
 const WORM_DISTANCE_SEARCHADD = 0.1f0
+const MIN_ACCEPTABLE_CIRCULARITY = 0.10f0
 const MAX_AREA = 500
 
 # Helper distance function
 distance_2d(p1::Point2f, p2::Point2f) = norm(p1 - p2)
-
-# Interpolate points along circular arc between two points on circle
-function interpolate_circular_path(p_start_, p_end_, circle_center_, circle_radius_, num_intermediate_points)::Vector{Point2f}
-    v_start = p_start_ - circle_center_; v_end = p_end_ - circle_center_
-    angle_start_rad = atan(v_start[2], v_start[1]); angle_end_rad = atan(v_end[2], v_end[1])
-    delta_angle_rad = angle_end_rad - angle_start_rad
-    if delta_angle_rad > π delta_angle_rad -= 2π elseif delta_angle_rad < -π delta_angle_rad += 2π end
-    interpolated_points = Vector{Point2f}(undef, num_intermediate_points)
-    total_steps_for_interpolation = num_intermediate_points + 1
-    for i in 1:num_intermediate_points
-        fraction = Float32(i) / Float32(total_steps_for_interpolation)
-        current_angle_rad = angle_start_rad + fraction * delta_angle_rad
-        pt_x = circle_center_[1] + circle_radius_ * cos(current_angle_rad)
-        pt_y = circle_center_[2] + circle_radius_ * sin(current_angle_rad)
-        interpolated_points[i] = Point2f(pt_x, pt_y)
-    end
-    return interpolated_points
-end
 
 # Features for each detected worm
 struct WormFeatures
@@ -78,6 +56,8 @@ function worm_track_pass(binary, is_forward_pass, img_center, arena_radius, on_c
         search_center::Point2f = Point2f(0,0)
 
         binary_view = view(binary, :, :, current_frame)
+
+        
         all_objects_in_frame = [WormFeatures(f.centroid, f.wormarea, f.major_axis, f.minor_axis, f.pixels_abs, f.boundary_pixels_abs) for f in find_objects_features(binary_view, MIN_AREA, MAX_AREA)]
 
         if !isnothing(last_feature)
@@ -104,7 +84,6 @@ function worm_track_pass(binary, is_forward_pass, img_center, arena_radius, on_c
                 norm_dist_factor = WORM_DISTANCE_LINK
                 for (k, cand_feat) in enumerate(possible_worm)
                     dist_to_search_center = distance_2d(cand_feat.centroid, search_center)
-                    dist_score = dist_to_search_center / norm_dist_factor
                     # score based solely on distance
                     current_score = dist_to_search_center / norm_dist_factor
                     if current_score < best_score
@@ -116,15 +95,19 @@ function worm_track_pass(binary, is_forward_pass, img_center, arena_radius, on_c
                     chosen_worm = possible_worm[best_candidate_idx]
                 end
             end
-            worm_track[current_frame] = chosen_worm
-            if !isnothing(chosen_worm)
-                last_feature = chosen_worm
-                last_position = chosen_worm.centroid
-                num_misses = 0
-            else
-                num_misses += 1
-                last_feature = nothing
+            if !isnothing(chosen_worm) && chosen_worm.circularity < MIN_ACCEPTABLE_CIRCULARITY
+                chosen_worm = nothing
             end
+        end
+
+        worm_track[current_frame] = chosen_worm
+        if !isnothing(chosen_worm)
+            last_feature = chosen_worm
+            last_position = chosen_worm.centroid
+            num_misses = 0
+        else
+            num_misses += 1
+            last_feature = nothing
         end
     end
     return worm_track

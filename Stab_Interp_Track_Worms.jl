@@ -22,14 +22,8 @@ using .FUNC_ObjectFind
 include("FUNC_WormFinderCIRCLE.jl")
 using .FUNC_WormFinderCIRCLE
 
-# --- Constants ---
+# --- Constants ---, more constants are hiding in FUNC_WormFinderCIRCLE right now
 const THRESHOLD = 1.5f0
-const MIN_AREA = 15
-const WORM_DISTANCE_LINK = 40.0f0       
-const WORM_DISTANCE_SEARCHADD = 0.1f0  
-const MIN_ACCEPTABLE_CIRCULARITY = 0.10f0
-const MAX_AREA = 500
-
 const CM_PER_PIXEL = 1.0f0 / 58.6f0
 const MSEC_PER_FRAME = 50.0f0 * 2.0f0
 
@@ -60,16 +54,19 @@ for filepath in filepaths
     divided_stack = data ./ (reference .+ eps(Float32(1.0)))
     global binary_stack = divided_stack  .> THRESHOLD
 
-    positions_, areas_2, perimeters_, circularities, track_img_rows, track_img_cols = create_track(binary_stack)
+    positions_, areas_2, major_axes_, minor_axes_, track_img_rows, track_img_cols = create_track(binary_stack)
 
     times_s_vec = [p[3] * MSEC_PER_FRAME / 1000.0f0 for p in positions_]
     positions_cm_s_vec = [Point3f(p[1]*CM_PER_PIXEL, (track_img_rows - p[2])*CM_PER_PIXEL, times_s_vec[i]) for (i,p) in enumerate(positions_)]
 
     #Save the WormData struct
-    push!(all_worms, WormData(filepath, positions_, areas_2, perimeters_, circularities, img_rows, img_cols, times_s_vec, positions_cm_s_vec))
+    push!(all_worms, WormData(filepath, positions_, areas_2, major_axes_, minor_axes_, img_rows, img_cols, times_s_vec, positions_cm_s_vec))
 end
 
-## 3D Plot
+
+## --------- Plotting below 
+
+## Fun 3D Plot
 fig_3d_traj = Figure(size=(1200, 900)) 
 max_time_s_overall = 0.0f0; img_width_cm_overall = 7.5f0; img_height_cm_overall = 7.5f0
 valid_times_all_worms = [data.times_s for data in all_worms if !isempty(data.times_s)]
