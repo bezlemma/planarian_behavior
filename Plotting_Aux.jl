@@ -1,10 +1,10 @@
 
-function plot_all_distances_from_center(all_worm_data::Vector{WormProcessedData})
+function plot_all_distances_from_center(all_worm_data)
     fig = Figure(size=(1000, 750))
     ax = Axis(fig[1,1], xlabel="Time (s)", ylabel="Distance from Center (cm)", title="Distance from Image Center Over Time")
     colors = distinguishable_colors(max(1,length(all_worm_data)), [RGB(1,1,1), RGB(0,0,0)], lchoices=range(20, stop=70, length=15))
     for (i, data) in enumerate(all_worm_data)
-        center_x_px = data.img_cols / 2.0f0; center_y_px = data.img_rows / 2.0f0
+        center_x_px = data.img_cols / 2.0; center_y_px = data.img_rows / 2.0
         center_point_px = Point2f(center_x_px, center_y_px)
         distances_cm = Float32[]
         valid_times_s = data.times_s
@@ -20,15 +20,15 @@ function plot_all_distances_from_center(all_worm_data::Vector{WormProcessedData}
     display(GLMakie.Screen(), fig); return fig
 end
 
-function calculate_msd(positions_2d_cm::Vector{Point2f}, times_s::Vector{Float32})
-    n_points = length(positions_2d_cm)
-    if n_points < 2 || length(times_s) != n_points return Dict{Float32, Float32}() end
+function calculate_msd(positions, times)
+    n_points = length(positions)
+    if n_points < 2 || length(times) != n_points return Dict{Float32, Float32}() end
     msd_values = Dict{Float32, Vector{Float32}}()
     for lag_frames in 1:n_points-1
         for i in 1:(n_points - lag_frames)
-            p1 = positions_2d_cm[i]; p2 = positions_2d_cm[i + lag_frames]
+            p1 = positions[i]; p2 = positions[i + lag_frames]
             diff_vec = p2 - p1; dist_sq = sum(diff_vec.^2)
-            time_lag_s = abs(times_s[i + lag_frames] - times_s[i])
+            time_lag_s = abs(times[i + lag_frames] - times[i])
             time_lag_key = round(time_lag_s, digits=3)
             if !haskey(msd_values, time_lag_key) msd_values[time_lag_key] = Float32[] end
             push!(msd_values[time_lag_key], dist_sq)
@@ -41,7 +41,7 @@ function calculate_msd(positions_2d_cm::Vector{Point2f}, times_s::Vector{Float32
     return averaged_msd
 end
 
-function plot_all_msd(all_worm_data::Vector{WormProcessedData})
+function plot_all_msd(all_worm_data)
     fig = Figure(size=(1000, 750))
     ax = Axis(fig[1,1], xlabel="Time Lag τ (s)", ylabel="MSD (cm²)", xscale=log10, yscale=log10)
     colors = distinguishable_colors(max(1,length(all_worm_data)), [RGB(1,1,1), RGB(0,0,0)], lchoices=range(20, stop=70, length=15))
@@ -63,10 +63,10 @@ function plot_all_msd(all_worm_data::Vector{WormProcessedData})
         end
     end
     if plotted_anything && isfinite(min_lag_overall) && isfinite(max_lag_overall) && min_lag_overall < max_lag_overall
-        actual_min_lag = max(min_lag_overall, 1e-3f0); actual_max_lag = max_lag_overall
+        actual_min_lag = max(min_lag_overall, 1e-3); actual_max_lag = max_lag_overall
         if actual_min_lag < actual_max_lag
             ref_lags = 10 .^ LinRange(log10(actual_min_lag), log10(actual_max_lag), 50)
-            anchor_y_at_min_lag = isfinite(min_msd_val_overall) ? max(min_msd_val_overall, 1e-9f0) : 1e-4f0
+            anchor_y_at_min_lag = isfinite(min_msd_val_overall) ? max(min_msd_val_overall, 1e-9) : 1e-4
             y1_vals = anchor_y_at_min_lag .* (ref_lags ./ ref_lags[1]).^1.0; lines!(ax, ref_lags, y1_vals, color=RGB(0.5,0.5,0.5), linestyle=:dash, label="α=1")
             y2_vals = anchor_y_at_min_lag .* (ref_lags ./ ref_lags[1]).^2.0; lines!(ax, ref_lags, y2_vals, color=RGB(0.7,0.7,0.7), linestyle=:dot, label="α=2")
             y05_vals = anchor_y_at_min_lag .* (ref_lags ./ ref_lags[1]).^0.5; lines!(ax, ref_lags, y05_vals, color=RGB(0.3,0.3,0.3), linestyle=:dashdot, label="α=0.5")
@@ -76,7 +76,7 @@ function plot_all_msd(all_worm_data::Vector{WormProcessedData})
     display(GLMakie.Screen(), fig); return fig
 end
 
-function plot_sum_pairwise_differences_over_time(all_worm_data::Vector{WormProcessedData})
+function plot_sum_pairwise_differences_over_time(all_worm_data)
     fig = Figure(size=(1000, 750))
     ax = Axis(fig[1,1], xlabel="Time (s)", ylabel="Sum of Pairwise Distances (cm)", title="Sum of Pairwise Worm Distances Over Time")
     if length(all_worm_data) < 2 display(GLMakie.Screen(), fig); return fig end
@@ -84,7 +84,7 @@ function plot_sum_pairwise_differences_over_time(all_worm_data::Vector{WormProce
     worm_pos_at_frame_idx = [Dict{Int, Point2f}() for _ in 1:length(all_worm_data)]
     for (data_idx, data) in enumerate(all_worm_data)
         for p3d_px in data.positions_px
-            frame_idx = round(Int, p3d_px[3]); time_s = frame_idx * MSEC_PER_FRAME / 1000.0f0
+            frame_idx = round(Int, p3d_px[3]); time_s = frame_idx * MSEC_PER_FRAME / 1000.0
             push!(all_frame_indices_with_data, frame_idx)
             if !haskey(frame_to_time_map, frame_idx) frame_to_time_map[frame_idx] = time_s end
             pos_x_cm = p3d_px[1] * CM_PER_PIXEL; pos_y_cm = (data.img_rows - p3d_px[2]) * CM_PER_PIXEL
@@ -102,7 +102,7 @@ function plot_sum_pairwise_differences_over_time(all_worm_data::Vector{WormProce
             end
         end
         if length(active_worms_positions_at_frame) >= 2
-            current_sum_pairwise_dist = 0.0f0
+            current_sum_pairwise_dist = 0.0
             for i in 1:length(active_worms_positions_at_frame), j in (i+1):length(active_worms_positions_at_frame)
                 current_sum_pairwise_dist += distance_2d(active_worms_positions_at_frame[i], active_worms_positions_at_frame[j])
             end
@@ -135,15 +135,15 @@ function view_stack_and_worm(binary_stack_to_show,tracked_worm_data)
         return Gray.(view(binary_stack_to_show, :, :, f_idx)) 
     end
     image!(ax_img, img_slice_obs, interpolate=false, colormap=:grays, colorrange=(0,1))
-    worm_marker_obs = Observable([Circle(Point2f(NaN, NaN), 0f0)])
+    worm_marker_obs = Observable([Circle(Point2f(NaN, NaN), 0)])
     on(frame_idx_obs) do f_idx
         if haskey(worm_info_for_frame, f_idx)
             centroid, wormarea = worm_info_for_frame[f_idx]
             radius = sqrt(max(0.0, Float64(wormarea)) / π)
-            display_radius = clamp(Float32(radius), 2f0, 25f0)
+            display_radius = clamp(Float32(radius), 2, 25)
             worm_marker_obs[] = [Circle(centroid, display_radius)]
         else
-            worm_marker_obs[] = [Circle(Point2f(NaN, NaN), 0f0)]
+            worm_marker_obs[] = [Circle(Point2f(NaN, NaN), 0)]
         end
     end
     poly!(ax_img, worm_marker_obs, color=marker_color, strokecolor=:transparent)
