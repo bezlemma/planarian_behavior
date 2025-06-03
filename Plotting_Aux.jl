@@ -6,7 +6,7 @@ using GLMakie, GeometryBasics, Colors
 const CM_PER_PIXEL = 1.0 / 58.6
 const MSEC_PER_FRAME = 50.0 * 2.0
 
-export plot_all_distances_from_center, calculate_msd, plot_all_msd, plot_sum_pairwise_differences_over_time, view_stack_and_worm, plot_lightdark
+export plot_all_distances_from_center, calculate_msd, plot_all_msd, plot_sum_pairwise_differences_over_time, view_stack_and_worm, plot_lightdark, plot_3d_trajectory
 
 function plot_all_distances_from_center(all_worm_data)
     fig = Figure(size=(1000, 750))
@@ -194,6 +194,45 @@ function plot_lightdark(worm_results)
         if !isempty(x_sub)
             scatter!(ax, x_sub, y_sub, color=y_sub, colormap=custom_cmap, markersize=15)
         end
+    end
+
+    display(GLMakie.Screen(), fig)
+    return fig
+end
+
+# Function to plot 3D trajectories with behavior coloring
+function plot_3d_trajectory(worm_results)
+    fig = Figure(size=(1400, 1000), backgroundcolor=:white)
+    # Extract valid times
+    valid_times = [d.times_s for d in worm_results if !isempty(d.times_s)]
+    max_time = maximum([maximum(ts) for ts in valid_times])
+    # Determine image dimensions in cm
+    img_width_cm = worm_results[1].img_cols * CM_PER_PIXEL
+    img_height_cm = worm_results[1].img_rows * CM_PER_PIXEL
+
+    ax = Axis3(fig[1,1],
+        xlabel="X Position (cm)", ylabel="Y Position (cm)", zlabel="Time (s)",
+        xlabelsize=14, ylabelsize=14, zlabelsize=14,
+        title="3D Worm Trajectory", titlesize=16,
+        limits=((0, img_width_cm), (0, img_height_cm), (0, max_time)),
+        aspect=(1, 1, 0.8)
+    )
+
+    # Define behavior colors
+    behavior_colors = Dict(
+        :away    => RGBA(1.0, 0.2, 0.2, 0.7),
+        :toward  => RGBA(0.2, 0.5, 1.0, 0.7),
+        :along   => RGBA(0.1, 0.1, 0.1, 0.7),
+        :turning => RGBA(0.0, 0.8, 0.2, 0.7),
+        :pausing => RGBA(0.9, 0.1, 0.9, 0.7)
+    )
+
+    # Plot each worm trail
+    for w in worm_results
+        pts3 = w.positions_cm
+        if length(pts3) < 2 continue end
+        cols = [get(behavior_colors, b, RGBA(0.5,0.5,0.5,0.7)) for b in w.behaviors]
+        lines!(ax, pts3, color=cols, linewidth=6)
     end
 
     display(GLMakie.Screen(), fig)
