@@ -16,7 +16,7 @@ include("FUNC_ObjectFind.jl"); using .FUNC_ObjectFind
 include("FUNC_WormBehaviors.jl"); using .FUNC_WormBehaviors
 
 # --- Constants ---, more constants are hiding in FUNC_WormFinderCIRCLE right now
-THRESHOLD = 1.5
+THRESHOLD = 1.0 #1.5 for TrailFollow
 CM_PER_PIXEL = 1.0 / 58.6
 MSEC_PER_FRAME = 50.0 * 2.0
 
@@ -26,11 +26,17 @@ MAJOR_MINOR_MAX_RATIO = 10.0 #If the worm is 30x longer than it is wide, it isn'
 WORM_DISTANCE_SEARCHADD = 20.0
 
 filepaths = [
-    "/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATM1_1.tif",
-    "/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATM1_2.tif",
-    "/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATM1_3.tif",
-    "/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATM1_4.tif",
-    "/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATM1_5.tif",
+    #"/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATM4_1.tif",
+    #"/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATM4_2.tif",
+    #"/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATM4_3.tif",
+    #"/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATM4_4.tif",
+    #"/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATM4_5.tif",
+    "/Users/dl0346/Documents/PlanarianVideos/May28/HalfRed/ATM1_1.tif",
+    #"/Users/dl0346/Documents/PlanarianVideos/May28/HalfRed/ATM1_2.tif",
+    #"/Users/dl0346/Documents/PlanarianVideos/May28/HalfRed/ATM1_3.tif",
+    #"/Users/dl0346/Documents/PlanarianVideos/May28/HalfRed/ATM1_4.tif",
+    #"/Users/dl0346/Documents/PlanarianVideos/May28/HalfRed/ATM1_5.tif",
+    #"/Users/dl0346/Documents/PlanarianVideos/May28/HalfRed/ATM1_6.tif",
 ]
 global binary_stack = BitArray{3}(undef, (0,0,0))
 all_worms = WormData[]
@@ -91,9 +97,9 @@ for filepath in filepaths
 end
 
 
-## --------- Beautiful 3D Trajectory Plotting
+## --------- Plot
 
-# Create a beautiful figure with better styling
+
 fig_3d_traj = Figure(size=(1400, 1000), backgroundcolor=:white) 
 
 valid_times_all_worms = [data.times_s for data in all_worms if !isempty(data.times_s)]
@@ -101,7 +107,6 @@ max_time = maximum([maximum(ts) for ts in valid_times_all_worms])
 img_width_cm = all_worms[1].img_cols * CM_PER_PIXEL
 img_height_cm= all_worms[1].img_rows * CM_PER_PIXEL
 
-# Create 3D axis with better styling
 ax_3d = Axis3(fig_3d_traj[1,1], 
     xlabel="X Position (cm)", ylabel="Y Position (cm)", zlabel="Time (s)",
     xlabelsize=14, ylabelsize=14, zlabelsize=14,
@@ -110,7 +115,6 @@ ax_3d = Axis3(fig_3d_traj[1,1],
     aspect = (1, 1, 0.8)  # Make time axis slightly compressed
 )
 
-# Define beautiful colors for each behavior
 behavior_colors = Dict(
     :away    => RGBA(1.0, 0.2, 0.2, 0.7),  # Bright Red
     :toward  => RGBA(0.2, 0.5, 1.0, 0.7),  # Bright Blue  
@@ -137,7 +141,7 @@ for (i, worm) in enumerate(all_worms)
     lines!(ax_3d, points, color=colors, linewidth=8.0, linestyle=:solid)
 end
 
-# Create a clean legend with sample lines
+# Create a legend
 legend_elements = []
 for (beh, color) in behavior_colors
     # Create visible legend lines (not off-screen)
@@ -145,11 +149,10 @@ for (beh, color) in behavior_colors
     lines!(ax_3d, sample_points, color=color, linewidth=6.0, visible=false) # Hidden but in legend
     push!(legend_elements, LineElement(color=color, linewidth=4, linestyle=:solid))
 end
-
-# Add legend
 Legend(fig_3d_traj[1,2], legend_elements, [string(beh) for beh in keys(behavior_colors)], 
        "Behaviors", framevisible=true, backgroundcolor=:white)
 
 display(GLMakie.Screen(), fig_3d_traj) 
 
 #interactive_fig = view_stack_and_worm(binary_stack, all_worms[end] ) #if you want to use this, you'll need to load the plot function from Plotting_Aux.jl
+

@@ -143,6 +143,7 @@ function remove_outlier_objects(binary_mask::BitArray{3}, MIN_AREA, MAX_AREA, MA
             end
         end
     end
+    
     return filtered_mask
 end
 

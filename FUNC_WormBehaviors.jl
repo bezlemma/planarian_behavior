@@ -65,7 +65,7 @@ function compute_behaviors(positions, times_s,
             raw_behaviors[i] = :pausing
         else
             pos_current = Point2f(positions[i][1], positions[i][2])
-            if norm(pos_current - img_center) < circle_radius*0.9 # worm inside inner 90% of arena
+            if norm(pos_current - img_center) < circle_radius*0.8 # worm inside inner 90% of arena
                     raw_behaviors[i] = r_vel > 0 ? :away : :toward
             else
                 if abs(r_vel) > t_vel
@@ -98,7 +98,7 @@ function smooth_behaviors(behaviors::Vector{Symbol})
     end
     
     smoothed = copy(behaviors)
-    window_size = 5  # window for smoothing
+    window_size = 20  # window for smoothing
     
     # first pass: majority filter
     for i in 2:(n-1)

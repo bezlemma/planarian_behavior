@@ -1,3 +1,12 @@
+module Plotting_Aux
+
+using GLMakie, GeometryBasics, Colors
+
+# Unit conversion constants
+const CM_PER_PIXEL = 1.0 / 58.6
+const MSEC_PER_FRAME = 50.0 * 2.0
+
+export plot_all_distances_from_center, calculate_msd, plot_all_msd, plot_sum_pairwise_differences_over_time, view_stack_and_worm, plot_lightdark
 
 function plot_all_distances_from_center(all_worm_data)
     fig = Figure(size=(1000, 750))
@@ -150,3 +159,45 @@ function view_stack_and_worm(binary_stack_to_show,tracked_worm_data)
     display(GLMakie.Screen(), fig)
     return fig
 end
+
+# Function to plot light/dark trajectories
+function plot_lightdark(worm_results)
+    fig = Figure(size=(1000, 1000))
+    img_width_cm = 7.5; img_height_cm = 7.5
+
+    ax = Axis(fig[1,1], xlabel="X Position (cm)", ylabel="Y Position (cm)",
+        xlabelsize=14, ylabelsize=14, xgridvisible=false,
+        ygridvisible=false, limits=((0, img_width_cm), (0, img_height_cm)))
+
+    # Draw boundary circle
+    centerX = img_width_cm / 2.0; centerY = img_height_cm / 2.0
+    circle_radius = img_height_cm / 2.05
+    circle_geom = Circle(Point2f(centerX, centerY), circle_radius)
+    poly!(ax, circle_geom, color=:transparent, strokecolor=:black, strokewidth=2)
+
+    # Shade bottom half
+    num_points_arc = 100
+    theta_arc = range(pi, 0, length=num_points_arc)
+    arc_x = centerX .+ circle_radius .* cos.(theta_arc)
+    arc_y_bottom = centerY .- circle_radius .* sin.(theta_arc)
+    half_circle_vertices_bottom = [Point2f(x, y) for (x, y) in zip(arc_x, arc_y_bottom)]
+    poly!(ax, half_circle_vertices_bottom, color=RGBA(0.6, 0.1, 0.1, 0.8))
+
+    # Plot trajectories
+    for worm in worm_results
+        points = worm.positions_cm
+        x_pos = [pt[1] for pt in points]
+        y_pos = [pt[2] for pt in points]
+        subsample_ix = 1:2:length(points)
+        x_sub = x_pos[subsample_ix]; y_sub = y_pos[subsample_ix]
+        custom_cmap = cgrad([RGBA(colorant"cyan", 0.1), RGBA(colorant"blue", 0.1)])
+        if !isempty(x_sub)
+            scatter!(ax, x_sub, y_sub, color=y_sub, colormap=custom_cmap, markersize=15)
+        end
+    end
+
+    display(GLMakie.Screen(), fig)
+    return fig
+end
+
+end # module Plotting_Aux

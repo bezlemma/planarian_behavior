@@ -8,7 +8,7 @@ using LinearAlgebra, Statistics, GeometryBasics
 
 include("FUNC_ObjectFind.jl"); using .FUNC_ObjectFind
 
-export find_objects_features, create_track, worm_track_pass, interpolate_circular_path, WormData
+export create_track, worm_track_pass, interpolate_circular_path, WormData
 
 # Constants for worm tracking
 const WORM_DISTANCE_LINK = 40.0
@@ -84,14 +84,14 @@ function worm_track_pass(binary, is_forward_pass, img_center, arena_radius, on_c
                 norm_dist_factor = WORM_DISTANCE_LINK
                 for (k, cand_feat) in enumerate(possible_worm)
                     dist_to_search_center = distance_2d(cand_feat.centroid, search_center)
-                    dist_score = dist_to_search_center / norm_dist_factor
-                    # score based solely on distance
                     current_score = dist_to_search_center / norm_dist_factor
+                    
                     if current_score < best_score
                         best_score = current_score
                         best_candidate_idx = k
                     end
                 end
+
                 if best_candidate_idx != -1
                     chosen_worm = possible_worm[best_candidate_idx]
                 end
@@ -119,12 +119,12 @@ function create_track(binary, circle, WORM_DISTANCE_SEARCHADD)
     #Set up image info
     img_rows, img_cols, num_frames = size(binary, 1), size(binary, 2), size(binary, 3)
     img_center = Point2f(img_cols / 2.0f0, img_rows / 2.0f0)
-    arena_radius = min(img_rows, img_cols) / 2
+    arena_radius = max(img_rows, img_cols) / 2
     on_circle_tol = 15
 
     #Look for the worm both forwards and backwards
-    forward_pass_features = worm_track_pass(binary, true, img_center, arena_radius, on_circle_tol,WORM_DISTANCE_SEARCHADD)
-    backward_pass_features = worm_track_pass(binary, false, img_center, arena_radius, on_circle_tol,WORM_DISTANCE_SEARCHADD)
+    forward_pass_features = worm_track_pass(binary, true, img_center, arena_radius, on_circle_tol, WORM_DISTANCE_SEARCHADD)
+    backward_pass_features = worm_track_pass(binary, false, img_center, arena_radius, on_circle_tol, WORM_DISTANCE_SEARCHADD)
 
     merged_features = Vector{Union{Nothing, WormFeatures}}(nothing, num_frames)
     positions = Point3f[]
@@ -176,13 +176,8 @@ function create_track(binary, circle, WORM_DISTANCE_SEARCHADD)
                 dist_after_gap = distance_2d(worm_after_gap.centroid, img_center)
                 radius = (dist_before_gap + dist_after_gap) / 2
 
-                interpolated_points_2d = interpolate_circular_path(
-                    worm_before_gap.centroid,
-                    worm_after_gap.centroid,
-                    img_center,
-                    radius,
-                    num_intermediate_points,
-                    WORM_DISTANCE_SEARCHADD)
+                interpolated_points_2d = interpolate_circular_path( worm_before_gap.centroid,
+                    worm_after_gap.centroid, img_center, radius, num_intermediate_points, WORM_DISTANCE_SEARCHADD)
                 # only proceed if interpolation returned the full set of points
                 if length(interpolated_points_2d) == num_intermediate_points
                     for k in 1:num_intermediate_points
