@@ -6,7 +6,17 @@ using GLMakie, GeometryBasics, Colors
 const CM_PER_PIXEL = 1.0 / 58.6
 const MSEC_PER_FRAME = 50.0 * 2.0
 
-export plot_all_distances_from_center, calculate_msd, plot_all_msd, plot_sum_pairwise_differences_over_time, view_stack_and_worm, plot_lightdark, plot_3d_trajectory
+# Behavior colors used across plots
+export behavior_colors
+const behavior_colors = Dict(
+    :away    => RGBA(1.0, 0.2, 0.2, 0.7),
+    :toward  => RGBA(0.2, 0.5, 1.0, 0.7),
+    :along   => RGBA(0.1, 0.1, 0.1, 0.7),
+    :turning => RGBA(0.0, 0.8, 0.2, 0.7),
+    :pausing => RGBA(0.9, 0.1, 0.9, 0.7)
+)
+
+export plot_all_distances_from_center, calculate_msd, plot_all_msd, plot_sum_pairwise_differences_over_time, view_stack_and_worm, plot_lightdark, plot_3d_trajectory, plot_behavior_distribution
 
 function plot_all_distances_from_center(all_worm_data)
     fig = Figure(size=(1000, 750))
@@ -218,15 +228,6 @@ function plot_3d_trajectory(worm_results)
         aspect=(1, 1, 0.8)
     )
 
-    # Define behavior colors
-    behavior_colors = Dict(
-        :away    => RGBA(1.0, 0.2, 0.2, 0.7),
-        :toward  => RGBA(0.2, 0.5, 1.0, 0.7),
-        :along   => RGBA(0.1, 0.1, 0.1, 0.7),
-        :turning => RGBA(0.0, 0.8, 0.2, 0.7),
-        :pausing => RGBA(0.9, 0.1, 0.9, 0.7)
-    )
-
     # Plot each worm trail
     for w in worm_results
         pts3 = w.positions_cm
@@ -236,6 +237,50 @@ function plot_3d_trajectory(worm_results)
     end
 
     display(GLMakie.Screen(), fig)
+    return fig
+end
+
+function plot_behavior_distribution(worm_results, cond_labels)
+    # Group results by condition
+    cond_results = [filter(r -> startswith(split(r.filepath, '/')[end], cond), worm_results) for cond in cond_labels]
+    # Behavior categories and colors
+    behaviors = collect(keys(behavior_colors))
+    colors = collect(values(behavior_colors))
+    # Compute normalized counts
+    n_conds = length(cond_labels)
+    data = zeros(Float32, length(behaviors), n_conds)
+    for (j, group) in enumerate(cond_results)
+        total = 0
+        for r in group, b in r.behaviors
+            i = findfirst(==(b), behaviors)
+            data[i, j] += 1
+            total += 1
+        end
+        if total > 0
+            data[:, j] ./= total
+        end
+    end
+    # Build figure
+    fig = Figure(size=(800,600), fonts=(; regular="sans"))
+    ax = Axis(fig[1,1];
+        title="Behavior distribution per condition",
+        xlabel="Condition", ylabel="Percentage",
+        xticks=(1:n_conds, cond_labels), yticks=0:0.2:1,
+        ytickformat = vs -> [string(Int(round(v*100))) * "%" for v in vs],
+        limits = ((0, n_conds+1), (0,1))
+    )
+    # Stack bars
+    bottom = zeros(Float32, n_conds)
+    plots = Vector{Any}(undef, length(behaviors))
+    for (i, beh) in enumerate(behaviors)
+        p = barplot!(ax, 1:n_conds, data[i,:]; offset=bottom,
+            color=colors[i], strokecolor=:black, strokewidth=1, label=string(beh)
+        )
+        plots[i] = p
+        bottom .+= data[i,:]
+    end
+    Legend(fig[1,2], plots, string.(behaviors))
+    display(fig)
     return fig
 end
 
