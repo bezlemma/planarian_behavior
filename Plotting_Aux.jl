@@ -134,7 +134,7 @@ function plot_sum_pairwise_differences_over_time(all_worm_data)
 end
 
 
-
+##
 function view_stack_and_worm(binary_stack_to_show,tracked_worm_data)
     marker_color=RGBAf(1.0, 0.0, 0.0, 0.7) 
     rows, cols, num_frames = size(binary_stack_to_show)
@@ -169,7 +169,7 @@ function view_stack_and_worm(binary_stack_to_show,tracked_worm_data)
     display(GLMakie.Screen(), fig)
     return fig
 end
-
+##
 # Function to plot light/dark trajectories
 function plot_lightdark(worm_results)
     fig = Figure(size=(1000, 1000))

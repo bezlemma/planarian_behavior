@@ -80,7 +80,7 @@ plot_behavior_distribution(results, cond_labels)
 
 ##
 # plot cumulative trail chase distances with color gradients
-function plot_trail_chase_cumulative(results)
+function plot_trail_chase_diffs(results)
     ts = results[1].times_s
     # helper for cumulative series of min distances
     function cum_series(indices)
@@ -114,13 +114,9 @@ function plot_trail_chase_cumulative(results)
     ax = Axis(fig[1, 1], xlabel="Time (s)", ylabel="Accumulated Min Distance (cm)", title="Trail Chase Distances")
 
     lines!(ax, ts, abs.(ATM1 .- ATMUNC1); color=ts, colormap=ColorSchemes.Blues, linewidth=5)
-    #lines!(ax, ts, ATMUN1; color=:blue, linewidth=5)
     lines!(ax, ts, abs.(ATM4 .- ATMUNC4); color=ts, colormap=ColorSchemes.Greens, linewidth=5)
-    #lines!(ax, ts, ATMUNC4; color=:green, linewidth=5)
     lines!(ax, ts, abs.(NDK1 .- NDKUNC1); color=ts, colormap=ColorSchemes.Reds, linewidth=5)
-    #lines!(ax, ts, NDKUNC1; color=:red, linewidth=5)
     lines!(ax, ts, abs.(TEC1 .- TECUNC1); color=ts, colormap=ColorSchemes.Purples, linewidth=5)
-    #lines!(ax, ts, TECUNC1; colormap=:orange, linewidth=5)
 
     
     mid_blue = ColorSchemes.Blues[0.7]
@@ -135,8 +131,6 @@ function plot_trail_chase_cumulative(results)
         LineElement(color = mid_Purples, linewidth = 5),
     ]
     
-    # Create the legend using the custom elements
-    #axislegend(ax, legend_elements, ["ATM1", "ATMUNC1", "ATM4", "ATMUNC4","NDK1", "NDKUNC1", "TEC1", "TECUNC1"]; position = :lt)
 
     axislegend(ax, legend_elements, ["ATM1/ATMUNC1", "ATM4/ATMUNC4","NDK1/NDKUNC1", "TEC1/TECUNC1"]; position = :lt)
 
@@ -145,4 +139,4 @@ function plot_trail_chase_cumulative(results)
 end
 
 # Generate the final plot
-plot_trail_chase_cumulative(results)
+plot_trail_chase_diffs(results)

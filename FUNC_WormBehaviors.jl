@@ -86,8 +86,6 @@ end
 
 
 
-
-
 """
 Smooth behavior sequence to reduce flickering by applying majority filtering
 and filling isolated behavior spikes.
