@@ -74,7 +74,7 @@ using .Plotting_Aux
 using GLMakie
 using ColorSchemes
 
-cond_labels = ["ATM1", "ATMUNC1", "ATM4", "ATMUNC4", "TEC1", "TECUNC1", "NDK1", "NDKUNC1"]
+cond_labels = [  "NDK1", "NDKUNC1"]
 plot_behavior_distribution(results, cond_labels)
 
 
@@ -113,34 +113,32 @@ function plot_trail_chase_cumulative(results)
     fig = Figure(size=(600, 400))
     ax = Axis(fig[1, 1], xlabel="Time (s)", ylabel="Accumulated Min Distance (cm)", title="Trail Chase Distances")
 
-    p1 = lines!(ax, ts, ATM1; color=ts, colormap=:blues, linewidth=5)
-    p2 = lines!(ax, ts, ATMUNC1; color=:blue, linewidth=5)
-    p3 = lines!(ax, ts, ATM4; color=ts, colormap=:greens, linewidth=5)
-    p4 = lines!(ax, ts, ATMUNC4; color=:green, linewidth=5)
-    p5 = lines!(ax, ts, NDK1; color=ts, colormap=:reds, linewidth=5)
-    p6 = lines!(ax, ts, NDKUNC1; color=:red, linewidth=5)
-    p7 = lines!(ax, ts, TEC1; color=ts, colormap=ColorSchemes.Oranges, linewidth=5)
-    p8 = lines!(ax, ts, TECUNC1; colormap=:orange, linewidth=5)
+    lines!(ax, ts, abs.(ATM1 .- ATMUNC1); color=ts, colormap=ColorSchemes.Blues, linewidth=5)
+    #lines!(ax, ts, ATMUN1; color=:blue, linewidth=5)
+    lines!(ax, ts, abs.(ATM4 .- ATMUNC4); color=ts, colormap=ColorSchemes.Greens, linewidth=5)
+    #lines!(ax, ts, ATMUNC4; color=:green, linewidth=5)
+    lines!(ax, ts, abs.(NDK1 .- NDKUNC1); color=ts, colormap=ColorSchemes.Reds, linewidth=5)
+    #lines!(ax, ts, NDKUNC1; color=:red, linewidth=5)
+    lines!(ax, ts, abs.(TEC1 .- TECUNC1); color=ts, colormap=ColorSchemes.Purples, linewidth=5)
+    #lines!(ax, ts, TECUNC1; colormap=:orange, linewidth=5)
 
-    mid_blue = Makie.to_colormap(:blues)[div(length(Makie.to_colormap(:blues)), 2)]
-    mid_red = Makie.to_colormap(:reds)[div(length(Makie.to_colormap(:reds)), 2)]
-    mid_green = Makie.to_colormap(:greens)[div(length(Makie.to_colormap(:greens)), 2)]
-    mid_orange = ColorSchemes.Oranges[0.5]
+    
+    mid_blue = ColorSchemes.Blues[0.7]
+    mid_red =  ColorSchemes.Reds[0.7]
+    mid_green = ColorSchemes.Greens[0.7]
+    mid_Purples = ColorSchemes.Purples[0.7]
 
     legend_elements = [
         LineElement(color = mid_blue, linewidth = 5),
-        LineElement(color = :blue, linewidth = 5),
         LineElement(color = mid_green, linewidth = 5),
-        LineElement(color = :green, linewidth = 5),
         LineElement(color = mid_red, linewidth = 5),
-        LineElement(color = :red, linewidth = 5),
-        LineElement(color = mid_orange, linewidth = 5),
-        LineElement(color = :orange, linewidth = 5)
+        LineElement(color = mid_Purples, linewidth = 5),
     ]
     
     # Create the legend using the custom elements
-    axislegend(ax, legend_elements, ["ATM1", "ATMUNC1", "ATM4", "ATMUNC4","NDK1", "NDKUNC1", "TEC1", "TECUNC1"]; position = :lt)
+    #axislegend(ax, legend_elements, ["ATM1", "ATMUNC1", "ATM4", "ATMUNC4","NDK1", "NDKUNC1", "TEC1", "TECUNC1"]; position = :lt)
 
+    axislegend(ax, legend_elements, ["ATM1/ATMUNC1", "ATM4/ATMUNC4","NDK1/NDKUNC1", "TEC1/TECUNC1"]; position = :lt)
 
     display(fig)
     return fig

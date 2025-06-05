@@ -31,7 +31,8 @@ function compute_behaviors(positions, times_s,
             v2 = positions[i+1] - positions[i]
             ang = acos(clamp(dot(v1, v2) / ((norm(v1)*norm(v2) + eps())), -1, 1))
             circ_ratio = minor_axes[i] / major_axes[i]
-            turning = ang > π/8 && circ_ratio > 0.8
+            #TODO: Mka this an argument
+            turning = ang > π/16 && circ_ratio > 0.6 #was π/8 and 0.8
         end
         
         # detect pausing by low speed - only truly stationary worms
