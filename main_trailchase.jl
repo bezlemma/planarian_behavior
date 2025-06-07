@@ -5,8 +5,10 @@ include("Stab_Interp_Track_Worms.jl")
 using .Stab_Interp_Track_Worms: track_worms
 
 # Define input files and parameters
-filepaths = [
+filepaths_test = ["/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATMUNC4_3.tif"]
+thresholds_test = [0.05] # Represents 0.05% of brightest pixels to be selected
 
+filepaths = [
     "/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATM1_1.tif",
     "/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATM1_2.tif",
     "/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATM1_3.tif",
@@ -28,6 +30,12 @@ filepaths = [
     "/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATMUNC4_3.tif",
     "/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATMUNC4_4.tif",
     "/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATMUNC4_5.tif",
+
+     "/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATM6_1.tif",
+    "/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATM6_2.tif",
+    "/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATM6_3.tif",
+    "/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATM6_4.tif",
+    "/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/ATM6_5.tif",
 
     "/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/NDK1_1.tif",
     "/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/NDK1_2.tif",
@@ -52,31 +60,31 @@ filepaths = [
     "/Users/dl0346/Documents/PlanarianVideos/May28/TrailFollow/TECUNC1_5.tif",
 ]
 
-thresholds = [1.5, 1.5, 1.5, 1.5, 1.5,
-1.5, 1.5, 1.5, 1.5, 1.5,
-1.5, 1.5, 1.5, 1.5, 1.5,
-1.5, 1.5, 1.5, 1.5, 1.5,
-
-1.5, 1.5, 1.5, 1.5, 1.5,
-1.5, 1.5, 1.5, 1.5, 1.5,
-1.5, 1.5, 1.5, 1.5, 1.5,
-1.5, 1.5, 1.5, 1.5, 1.5,
-]  # Per-file thresholds
+thresholds = [0.05, 0.05, 0.05, 0.05, 0.05,   #ATM1
+              0.05, 0.05, 0.05, 0.05, 0.05, 
+              0.05, 0.05, 0.05, 0.05, 0.05,   #ATM4
+              0.05, 0.05, 0.05, 0.05, 0.05,   #ATMUNC4
+            0.05, 0.05, 0.05, 0.05, 0.05,     #ATM6
+            0.05, 0.05, 0.05, 0.05, 0.05,  
+            0.05, 0.05, 0.05, 0.05, 0.05,    #NDKUNC
+            0.05, 0.05, 0.05, 0.05, 0.05,  
+            0.05, 0.05, 0.05, 0.05, 0.05] 
 
 # Call the processing function
-results, stacks = track_worms(filepaths; thresholds=thresholds)
+results, stacks = track_worms(filepaths; pixel_percentages=thresholds)
 
 # Plots
 include("Plotting_Aux.jl")
 using .Plotting_Aux
 
-##
+#
 using GLMakie
 using ColorSchemes
 
-cond_labels = [  "NDK1", "NDKUNC1"]
+cond_labels = [  "ATM1", "ATM4", "ATM6", "ATMUNC1", "ATMUNC4"] #Put whatever conditions you would like to plot here
 plot_behavior_distribution(results, cond_labels)
 
+view_stack_and_worm(stacks[end],results[end]) #Use the live-viewer
 
 ##
 # plot cumulative trail chase distances with color gradients

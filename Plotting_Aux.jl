@@ -1,6 +1,7 @@
 module Plotting_Aux
 
 using GLMakie, GeometryBasics, Colors
+using Statistics
 
 # Unit conversion constants
 const CM_PER_PIXEL = 1.0 / 58.6
@@ -11,7 +12,7 @@ export behavior_colors
 const behavior_colors = Dict(
     :away    => RGBA(1.0, 0.2, 0.2, 0.7),
     :toward  => RGBA(0.2, 0.5, 1.0, 0.7),
-    :along   => RGBA(0.1, 0.1, 0.1, 0.7),
+    :along   => RGBA(1.0, 1.0, 1.0, 0.7), # white for along
     :turning => RGBA(0.0, 0.8, 0.2, 0.7),
     :pausing => RGBA(0.9, 0.1, 0.9, 0.7)
 )
@@ -136,15 +137,18 @@ end
 
 ##
 function view_stack_and_worm(binary_stack_to_show,tracked_worm_data)
-    marker_color=RGBAf(1.0, 0.0, 0.0, 0.7) 
+    # Observable for dynamic marker color based on behavior
+    marker_color_obs = Observable(RGBA(1.0, 1.0, 1.0, 0.7))
     rows, cols, num_frames = size(binary_stack_to_show)
-    worm_info_for_frame = Dict{Int, Tuple{Point2f, Int}}() 
+    # Map frame index to (centroid, area, behavior)
+    worm_info_for_frame = Dict{Int, Tuple{Point2f, Int, Symbol}}()
     for i in 1:length(tracked_worm_data.positions_)
         pt3 = tracked_worm_data.positions_[i]
         frame_idx = Int(round(pt3[3]))
         centroid = Point2f(pt3[2], pt3[1]) # (col_, row_) for GLMakie point
         area = tracked_worm_data.areas_2[i]
-        worm_info_for_frame[frame_idx] = (centroid, area)
+        behavior = tracked_worm_data.behaviors[i]
+        worm_info_for_frame[frame_idx] = (centroid, area, behavior)
     end
     fig = Figure(size = (cols > rows ? (800, 800 * rows/cols + 100) : (800 * cols/rows + 100, 800)))
     ax_img = Axis(fig[1, 1])
@@ -154,21 +158,36 @@ function view_stack_and_worm(binary_stack_to_show,tracked_worm_data)
         return Gray.(view(binary_stack_to_show, :, :, f_idx)) 
     end
     image!(ax_img, img_slice_obs, interpolate=false, colormap=:grays, colorrange=(0,1))
-    worm_marker_obs = Observable([Circle(Point2f(NaN, NaN), 0)])
+    # Observables for position, size, and color of the worm marker
+    centroid_obs = Observable(Point2f(NaN, NaN))
+    size_obs = Observable(2.0f0)
+    color_obs = Observable(RGBA(1.0, 1.0, 1.0, 0.7))
+    # Reactive scatter plot for the worm marker
+    scatter_plot = scatter!(ax_img,
+        lift(centroid_obs) do c; c[1] end,
+        lift(centroid_obs) do c; c[2] end,
+        markersize = lift(size_obs) do s; s*6 end,
+        color = color_obs,
+        strokecolor = :transparent,
+        marker = :circle)
+    # Update marker on frame change
     on(frame_idx_obs) do f_idx
         if haskey(worm_info_for_frame, f_idx)
-            centroid, wormarea = worm_info_for_frame[f_idx]
+            centroid, wormarea, behavior = worm_info_for_frame[f_idx]
             radius = sqrt(max(0.0, Float64(wormarea)) / π)
             display_radius = clamp(Float32(radius), 2, 25)
-            worm_marker_obs[] = [Circle(centroid, display_radius)]
+            centroid_obs[] = centroid
+            size_obs[] = display_radius
+            color_obs[] = get(behavior_colors, behavior, RGBA(1.0, 1.0, 1.0, 0.7))
         else
-            worm_marker_obs[] = [Circle(Point2f(NaN, NaN), 0)]
+            # hide marker when no worm
+            centroid_obs[] = Point2f(NaN, NaN)
         end
     end
-    poly!(ax_img, worm_marker_obs, color=marker_color, strokecolor=:transparent)
     display(GLMakie.Screen(), fig)
     return fig
 end
+
 ##
 # Function to plot light/dark trajectories
 function plot_lightdark(worm_results)

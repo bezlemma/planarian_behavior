@@ -9,18 +9,38 @@ Returns a vector of symbols (:turning, :pausing, :toward, :away, :along) for eac
 """
 function compute_behaviors(positions, times_s,
                             major_axes, minor_axes,
-                            img_center, circle_radius)
+                            img_center, circle_radius;
+                            pausing_disp_threshold::Float64=5.0)
     n = length(positions)
     raw_behaviors = Vector{Symbol}(undef, n)
     speeds = zeros(Float32, n)
-    
-    # compute speeds between consecutive points
+    disps = zeros(Float32, n)
+    dts = zeros(Float32, n)
+    # compute speeds between consecutive points (pixels per second)
     for i in 2:n
         p1, p2 = positions[i-1], positions[i]
-        dt = times_s[i] - times_s[i-1]
-        speeds[i] = dt > 0 ? norm(Point2f(p2[1]-p1[1], p2[2]-p1[2])) / dt : 0
+        dts[i] = times_s[i] - times_s[i-1]
+        delta = Point2f(p2[1]-p1[1], p2[2]-p1[2])
+        disps[i] = norm(delta)
+        speeds[i] = dts[i] > 0 ? disps[i] / dts[i] : 0
     end
-    mean_speed = mean(speeds[2:end])
+    # median frame interval for pause gating (seconds)
+    dt_vals = dts[2:end]
+    # protect against empty dt_vals or any median errors
+    median_dt = try
+        isempty(dt_vals) ? 0f0 : median(dt_vals)
+    catch
+        0f0
+    end
+    max_dt_for_pause = 1.5f0 * median_dt
+
+    # raw pause flags per frame: small displacement in a normal interval
+    is_pause_raw = falses(n)
+    for j in 2:n
+        if speeds[j] < pausing_disp_threshold
+            is_pause_raw[j] = true
+        end
+    end
 
     # first pass: detect raw behaviors
     for i in 1:n
@@ -31,12 +51,11 @@ function compute_behaviors(positions, times_s,
             v2 = positions[i+1] - positions[i]
             ang = acos(clamp(dot(v1, v2) / ((norm(v1)*norm(v2) + eps())), -1, 1))
             circ_ratio = minor_axes[i] / major_axes[i]
-            #TODO: Mka this an argument
-            turning = ang > π/16 && circ_ratio > 0.6 #was π/8 and 0.8
+            turning = ang > π/32 && circ_ratio > 0.3 #was π/8 and 0.8
         end
         
-        # detect pausing by low speed - only truly stationary worms
-        pausing = speeds[i] < 0.0005f0  # Absolute minimal threshold
+        # detect pausing only when three consecutive raw frames are below threshold
+        pausing = (i >= 3) && is_pause_raw[i] && is_pause_raw[i-1] && is_pause_raw[i-2]
         
         # compute radial and tangential components of movement
         r_vel = 0f0  # radial velocity

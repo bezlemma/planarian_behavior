@@ -16,7 +16,7 @@ include("Plotting_Aux.jl"); using .Plotting_Aux: plot_lightdark
 
 # Conversion constants
 const CM_PER_PIXEL = 1.0 / 58.6
-const MSEC_PER_FRAME = 50.0 * 2.0
+const MSEC_PER_FRAME = 50.0
 const MIN_AREA = 15
 const MAX_AREA = 500
 const MAJOR_MINOR_MAX_RATIO = 10.0
@@ -53,8 +53,6 @@ function track_worms(filepaths::Vector{String};
         raw_stack = TiffImages.load(filepath)
         img_rows, img_cols, num_frames = size(raw_stack)
         
-        # Calculate median of raw stack (ImageJ-like workflow step 1)
-        # Ensure raw_median_ref_2D is Float32 and 2D
         raw_median_ref_2D = Float32.(median(Float32.(raw_stack), dims=3)[:,:,1])
 
         local_stack_frames = BitArray{3}(undef, img_rows, img_cols, num_frames)
@@ -62,33 +60,17 @@ function track_worms(filepaths::Vector{String};
         for frame_idx in 1:num_frames
             current_raw_frame = Float32.(raw_stack[:,:,frame_idx])
             
-            # Divide by median projection (ImageJ-like workflow step 2a)
             normalized_frame = current_raw_frame ./ (raw_median_ref_2D .+ eps(Float32))
-            
-            # Invert (ImageJ-like workflow step 2b)
+        
             inverted_normalized_frame = 1.0f0 .- normalized_frame
             
-            # Clamp values to [0, 1] range (mimics 8-bit conversion for percentile calculation)
             processed_frame = clamp.(inverted_normalized_frame, 0.0f0, 1.0f0)
             
-            # Percentile thresholding (ImageJ-like workflow step 3)
-            # Selects the threshold value that keeps the top `current_pixel_percentage` of pixels
             threshold_value = percentile(vec(processed_frame), 100.0 - current_pixel_percentage)
             
             binary_frame = processed_frame .> threshold_value
             local_stack_frames[:,:,frame_idx] = binary_frame
         end
-        
-        # Post-processing (morphological operations, object removal)
-        # These operations are applied to the stack after all frames are thresholded.
-        # Note: ImageMorphology functions expect array elements to be 0 or 1, or Booleans.
-        # The current `dilate(erode(condition))` pattern might need adjustment if applied per-frame vs. whole stack.
-        # For now, assuming remove_outlier_objects handles the BitArray stack correctly.
-        # The original code did: mask = dilate(erode(ds .> thr)) which implies per-frame morphology or element-wise.
-        # Let's apply morphology per frame as it's more common for cleaning.
-        # However, the original `remove_outlier_objects` took the whole stack.
-        # For simplicity, we'll keep `remove_outlier_objects` as is, operating on the full `local_stack_frames`.
-        # If finer per-frame morphology is needed before `remove_outlier_objects`, that's an additional refinement.
 
         local_stack = remove_outlier_objects(local_stack_frames, MIN_AREA, MAX_AREA, MAJOR_MINOR_MAX_RATIO)
         
