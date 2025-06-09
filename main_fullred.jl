@@ -155,10 +155,10 @@ for (i, speeds) in enumerate(speeds_per_cond)
 end
 ax2.xticks = (1:length(cond_labels), cond_labels)
 # render updated figure
-display(GLMakie.Screen(), fig)
+display(fig)
 
 
-
+##
 # Compute and plot % time spent in dark (lower half) per condition
 # Define conditions and grouping
 conditions = ["ATM 1wpi", "Control", "ATM 4wpi", "Control", "ATM 6wpi","NDK 1wpi", "Control", "TEC 1wpi", "Control"]
@@ -263,4 +263,4 @@ for (i, j) in pairs
     end
 end
 
-display(GLMakie.Screen(), fig_dark)
+display(fig_dark)
